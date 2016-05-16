@@ -1,14 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
+static void sig_chld(int signo){
+        pid_t pid;
+        int stat;
+        while((pid = wait(&stat)) > 0);
+        return;
+}
+
 int main()
 {
+	signal(SIGCHLD, sig_chld);
 	int ret;
     int serv_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     struct sockaddr_in serv_addr;
@@ -26,7 +36,7 @@ int main()
     while(1){
         int clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_addr, &clnt_addr_size);
 		if(-1 == clnt_sock)continue;
-        printf("new connection.\n");
+//        printf("new connection.\n");
         if(fork() == 0){
             close(serv_sock); 
             char cmd[4096];

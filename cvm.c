@@ -1,6 +1,6 @@
 //ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-kvm
-//ln -s /usr/bin/qemu-system-x86_64 /usr/bin/qemu-kvm
-//ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-x86_64
+//ln -s /usr/bin/qemu-kvm /usr/bin/qemu-kvm
+//ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-kvm
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,19 +19,20 @@ const char *logdir = "/var/cos/cvm/log";
 const char *dir = "/var/cos/cvm";
 const char *vmdir = "/var/cos/cvm/vm";
 const char *cldir = "/var/cos/cvm/vm/cl";
+const char *qmdir = "/var/cos/cvm/vm/qm";
 const char *isodir = "/var/cos/cvm/iso";
 const char *sysdir = "/var/cos/cvm/sys";
 const char *dataisodir = "/var/cos/cvm/data/iso";
 const char *datasysdir = "/var/cos/cvm/data/sys";
 const char *backupdir = "/var/cos/cvm/data/backup";
-const char *ifup = "/var/cos/cvm/ovs-ifup";
-const char *ifdown = "/var/cos/cvm/ovs-ifdown";
+const char *ifup = "/var/cos/cvm/qemu-ifup";
+const char *ifdown = "/var/cos/cvm/qemu-ifdown";
 
 const int filelen = 1024;
 const int namelen = 1024;
 const int cmdlen = 4*1024;
 const int resultlen = 64*1024;
-char file[filelen], name[namelen], cmd[cmdlen], result[resultlen];
+char file[filelen], name[namelen], cmd[cmdlen], result[resultlen], result2[resultlen];
 
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
@@ -245,7 +246,7 @@ bool vmdel(int id) {
 }
 
 bool vmison(int id) {
-	sprintf(cmd, "ps -ef | grep \"qemu-system-x86_64 -name VM%d \" | grep -v grep | wc -l", id);
+	sprintf(cmd, "ps -ef | grep \"qemu-kvm -name VM%d \" | grep -v grep | wc -l", id);
 	getresult(cmd, result, 0);
 	int rs;
 	sscanf(result, "%d", &rs);
@@ -278,13 +279,14 @@ bool vmon(int id, int cpu, int mem, char *mac) {
 		return true;
 	}
 	sprintf(file, "%s/VM%d", vmdir, id);
-	sprintf(cmd, "qemu-system-x86_64 -name VM%d -smp %d -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id);
+//	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id);
+	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id, qmdir, id, id);
 	xmlog(cmd);
 //	system(cmd);
 	exec(cmd);
 	return true;
 
-	usleep(10000);
+	usleep(1000);
 	if(vmison(id)) {
 		return true;
 	} else{
@@ -307,7 +309,7 @@ bool vmhalt(int id) {
 	if(!vmison(id)) {
 		return true;
 	}
-  sprintf(cmd, "ps -ef | grep \"qemu-system-x86_64 -name VM%d\" | grep -v grep", id);
+  sprintf(cmd, "ps -ef | grep \"qemu-kvm -name VM%d\" | grep -v grep", id);
   getresult(cmd, result);
   if(result[0] == 0) {
     return true;
@@ -317,7 +319,12 @@ bool vmhalt(int id) {
   sprintf(cmd, "kill -9 %d > /dev/null", rs);
   xmlog(cmd);
   system(cmd);
-  return true;
+	usleep(1000);
+	if(!vmison(id)) {
+		return true;
+	} else {
+ 		return false;
+	}
 }
 
 bool vmreset(int id) {
@@ -824,7 +831,7 @@ void migrate_recv0() {
   time(&t);
 	vmadd(1, base, id);
 	sprintf(file, "%s/VM%d", vmdir, id);
-	sprintf(cmd, "qemu-system-x86_64 -name VM%d -smp %d -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d -incoming tcp:0:%d > %s/%lld &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id+8000, logdir, t);
+	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d -incoming tcp:0:%d > %s/%lld &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id+8000, logdir, t);
 	xmlog(cmd);
 //	system(cmd);
 	exec(cmd);
@@ -1017,6 +1024,30 @@ void alter_rebase() {
 	system(cmd);
   printf("ok\n");
 }
+
+void online() {
+	sprintf(cmd, "ls %s", vmdir);
+  getresult(cmd, result2);
+  if(0 == result2[0]) {
+    printf("-1\n");
+    return;
+  }
+	int id;
+  char *p = result2;
+  while(*p) {
+		if(*p == 'V' && *(p+1) == 'M') {
+    	sscanf(p+2, "%d", &id);
+			int state = 0;
+			if(vmison(id)) state = 1;
+			printf("%d\n", id);
+			printf("%d\n", state);
+		}
+    p = strchr(p, 10);
+    ++p;
+  }
+  printf("-1\n");	
+}
+
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
 
@@ -1176,6 +1207,8 @@ int main(int argc, char **argv) {
 		} else if(3 == ctl) {
       alter_rebase();
     }
+	} else if(strcmp(cmd, "online") == 0) {
+		online();
 	} else{
 
 	}
