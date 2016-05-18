@@ -18,6 +18,7 @@ const char *log = "/var/cos/cvm/log/cvm.log";
 const char *logdir = "/var/cos/cvm/log";
 const char *dir = "/var/cos/cvm";
 const char *vmdir = "/var/cos/cvm/vm";
+const char *diskdir = "/var/cos/cvm/disk";
 const char *cldir = "/var/cos/cvm/vm/cl";
 const char *qmdir = "/var/cos/cvm/vm/qm";
 const char *isodir = "/var/cos/cvm/iso";
@@ -90,7 +91,7 @@ long long fileSize(char *file) {
 
 bool monitor(int id, char *cmd, char *result, int olog = 1) {
 	char path[1024];
-	sprintf(path, "%s/VM%d", cldir, id);
+	sprintf(path, "%s/CL%d", cldir, id);
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
 	strcpy(un.sun_path, path);
@@ -99,18 +100,22 @@ bool monitor(int id, char *cmd, char *result, int olog = 1) {
 	if(connect(sockfd, (struct sockaddr*)&un, sizeof(struct sockaddr_un)) == -1) {
 		return false;
 	}
-	usleep(1000);
+	usleep(100000);
 	read(sockfd, result, resultlen);
+//	printf("read: %s\n", result);
 	memset(result, 0, resultlen);
+//	printf("write: %s\n", cmd);
 	sprintf(result, "%s\n", cmd);
 	write(sockfd, result, strlen(result));
-	usleep(1000);
+	usleep(100000);
 	memset(result, 0, resultlen);
 	read(sockfd, result, resultlen);
+//	printf("read: %s\n", result);
 	close(sockfd);
 	if(olog) {
 		xmlog(cmd);
 		xmlog(result);
+	//	printf(": %s\n: %s\n", cmd, result);
 	}
 	return true;
 }
@@ -286,7 +291,7 @@ bool vmon(int id, int cpu, int mem, char *mac) {
 	exec(cmd);
 	return true;
 
-	usleep(1000);
+	usleep(100000);
 	if(vmison(id)) {
 		return true;
 	} else{
@@ -319,7 +324,7 @@ bool vmhalt(int id) {
   sprintf(cmd, "kill -9 %d > /dev/null", rs);
   xmlog(cmd);
   system(cmd);
-	usleep(1000);
+	usleep(100000);
 	if(!vmison(id)) {
 		return true;
 	} else {
@@ -644,6 +649,9 @@ void snapshot_create() {
 	} else{
 		printf("error\n");
 	}
+	sprintf(cmd, "%s/snap.php %d", dir, id);
+	xmlog(cmd);
+	system(cmd);
 }
 
 void snapshot_del() {
@@ -655,6 +663,9 @@ void snapshot_del() {
 	} else{
 		printf("error\n");
 	}
+	sprintf(cmd, "%s/snap.php %d", dir, id);
+	xmlog(cmd);
+	system(cmd);
 }
 
 void snapshot_apply() {
@@ -666,6 +677,9 @@ void snapshot_apply() {
 	} else{
 		printf("error\n");
 	}
+	sprintf(cmd, "%s/snap.php %d", dir, id);
+	xmlog(cmd);
+	system(cmd);
 }
 
 void cd_list() {
@@ -771,7 +785,7 @@ void os_rebuild() {
 		scanf("%d", &id);
 		if(id == -1)break;
 		vmadd(1, base, id);
-    usleep(1000);
+    usleep(100000);
     vmadd(1, base, id);
 	}
 	printf("ok\n");
@@ -802,7 +816,7 @@ void sync_rebuild() {
     scanf("%d", &id);
     if(id == -1)break;
     vmadd(1, base, id);
-    usleep(1000);
+    usleep(100000);
     vmadd(1, base, id);
   }
   printf("ok\n");
@@ -1048,6 +1062,66 @@ void online() {
   printf("-1\n");	
 }
 
+void disk_list() {
+	sprintf(cmd, "ls %s", diskdir);
+  getresult(cmd, result);
+	if(0 == result[0]) {
+		printf("-1\n");
+		return;
+	}
+  char *p = result;
+  while(*p) {
+    sscanf(p, "%s", name);
+    printf("%s\n", name);
+    p = strchr(p, 10);
+    ++p;
+  }
+  printf("-1\n");
+}
+
+void disk_create() {
+	int size;
+	scanf("%s%d", name, &size);
+	sprintf(file, "%s/%s%", diskdir, name);
+	sprintf(cmd, "qemu-img create -f qcow2  %s %dG > /dev/null", file, size);
+	xmlog(cmd);
+	system(cmd);
+	if(fileExist(file)) {
+		printf("ok\n");
+	} else {
+		printf("error\n");
+	}
+}
+
+void disk_mount() {
+	int id;
+	scanf("%s%d", name, &id);
+	sprintf(file, "%s/%s", diskdir, name);
+	sprintf(cmd, "drive_add 0 if=none,file=%s,format=qcow2,id=%s", file, name);
+//	printf("%s\n", cmd);
+	if(!monitor(id, cmd, result)) {
+		printf("error\n");
+	}
+	sprintf(cmd, "device_add virtio-blk-pci,drive=%s,id=%s", name, name);
+//	printf("%s\n", cmd);
+	if(monitor(id, cmd, result)) {
+		printf("ok\n");
+	} else {
+		printf("error\n");
+	}
+}
+
+void disk_umount() {
+	int id;
+	scanf("%s%d", name, &id);
+	sprintf(cmd, "device_del %s", name);
+	if(monitor(id, cmd, result)) {
+		printf("ok\n");
+	} else {
+		printf("error\n");
+	}
+}
+
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
 
@@ -1209,6 +1283,17 @@ int main(int argc, char **argv) {
     }
 	} else if(strcmp(cmd, "online") == 0) {
 		online();
+	} else if(strcmp(cmd, "disk") == 0) {
+		scanf("%d", &ctl);
+		if(1 == ctl) {
+			disk_list();
+		} else if(2 == ctl) {
+			disk_create();
+		} else if(3 == ctl) {
+			disk_mount();
+		} else if(4 == ctl) {
+			disk_umount();
+		}
 	} else{
 
 	}
