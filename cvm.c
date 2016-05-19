@@ -279,20 +279,36 @@ int vmstatus(int id) {
 	}
 }
 
-bool vmon(int id, int cpu, int mem, char *mac) {
+bool vmon(int id, int cpu, int mem, char *mac, int type, char *br=NULL) {
 	if(vmison(id)) {
 		return true;
 	}
 	sprintf(file, "%s/VM%d", vmdir, id);
-//	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id);
-	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id, qmdir, id, id);
+	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=no,downscript=no,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, id, id, cldir, id, id, id, qmdir, id, id);
 	xmlog(cmd);
+	printf("%s\n", cmd);
 //	system(cmd);
 	exec(cmd);
-	return true;
+//	return true;
 
 	usleep(100000);
+//		printf("type=%d br=%s\n", type, br);
 	if(vmison(id)) {
+		if(0 == type) {	//bridge
+			sprintf(cmd, "/sbin/ifconfig VM%d up; brctl addif br0 VM%d", id, id);
+			xmlog(cmd);
+			system(cmd);
+		} else if(1 == type) {	//vm-alone
+			//NULL
+		} else if(2 == type) {	//vswitch
+			sprintf(cmd, "/sbin/ifconfig VM%d up; brctl addif %s VM%d", id, br, id);
+			xmlog(cmd);
+			system(cmd);
+		} else if(3 == type) {	//host-only
+
+		} else if(4 == type) {	//nat
+
+		}
 		return true;
 	} else{
 		return false;
@@ -417,11 +433,12 @@ void ppower_status() {
 void ppower_on() {
 	int id, cpu, mem;
 	char mac[1024];
+	int type; char br[32];
 	while(true) {
 		scanf("%d", &id);
 		if(-1 == id)break;
-		scanf("%d %d %s", &cpu, &mem, mac);
-		if(vmon(id, cpu, mem, mac)) {
+		scanf("%d %d %s %d %s", &cpu, &mem, mac, &type, br);
+		if(vmon(id, cpu, mem, mac, type, br)) {
 			printf("ok\n");
 		} else{
 			printf("error\n");
@@ -520,8 +537,9 @@ void power_status() {
 void power_on() {
   int id, cpu, mem;
   char mac[1024];
-  scanf("%d %d %d %s", &id, &cpu, &mem, mac);
-  if(vmon(id, cpu, mem, mac)) {
+	int type; char br[32];
+  scanf("%d %d %d %s %d %s", &id, &cpu, &mem, mac, &type, br);
+  if(vmon(id, cpu, mem, mac, type, br)) {
     printf("ok\n");
   } else{
     printf("error\n");
@@ -1122,6 +1140,18 @@ void disk_umount() {
 	}
 }
 
+void brctl_addbr() {
+	int type, tag;
+	char br[32], eth[32], ip[32], mask[32];
+	scanf("%d%d%s%s%s%s", &type, &tag, br, eth, ip, mask);
+	sprintf(cmd, "%s/addbr.sh %d %s %s %s %s > /dev/null", dir, tag, br, eth, ip, mask);
+//	printf("%s\n", cmd);
+	xmlog(cmd);
+	system(cmd);
+	printf("ok\n");
+}
+
+
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
 
@@ -1293,6 +1323,12 @@ int main(int argc, char **argv) {
 			disk_mount();
 		} else if(4 == ctl) {
 			disk_umount();
+		}
+	} else if(strcmp(cmd, "brctl") == 0) {
+		scanf("%d", &ctl);
+		//addbr
+		if(1 == ctl) {
+			brctl_addbr();
 		}
 	} else{
 

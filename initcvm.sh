@@ -35,5 +35,6 @@ chmod +x /var/cos/cvm/online.php
 chmod +x /var/cos/cvm/online
 chmod +x /var/cos/cvm/qmp-shell
 chmod +x /var/cos/cvm/qmp.py
+chmod +x /var/cos/cvm/addbr.sh
 
 /var/cos/cvm/startcvm.sh &
