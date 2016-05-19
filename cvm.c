@@ -649,9 +649,9 @@ void snapshot_create() {
 	} else{
 		printf("error\n");
 	}
-	sprintf(cmd, "%s/snap.php %d", dir, id);
-	xmlog(cmd);
-	system(cmd);
+//	sprintf(cmd, "%s/snap.php %d &", dir, id);
+//	xmlog(cmd);
+//	system(cmd);
 }
 
 void snapshot_del() {
@@ -663,9 +663,9 @@ void snapshot_del() {
 	} else{
 		printf("error\n");
 	}
-	sprintf(cmd, "%s/snap.php %d", dir, id);
-	xmlog(cmd);
-	system(cmd);
+//	sprintf(cmd, "%s/snap.php %d &", dir, id);
+//	xmlog(cmd);
+//	system(cmd);
 }
 
 void snapshot_apply() {
@@ -677,9 +677,9 @@ void snapshot_apply() {
 	} else{
 		printf("error\n");
 	}
-	sprintf(cmd, "%s/snap.php %d", dir, id);
-	xmlog(cmd);
-	system(cmd);
+//	sprintf(cmd, "%s/snap.php %d &", dir, id);
+//	xmlog(cmd);
+//	system(cmd);
 }
 
 void cd_list() {
