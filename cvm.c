@@ -211,6 +211,8 @@ bool exec(char *cmd) {
 	return true;
 }
 
+
+
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
 
@@ -286,7 +288,7 @@ bool vmon(int id, int cpu, int mem, char *mac, int type, char *br=NULL) {
 	sprintf(file, "%s/VM%d", vmdir, id);
 	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=no,downscript=no,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, id, id, cldir, id, id, id, qmdir, id, id);
 	xmlog(cmd);
-	printf("%s\n", cmd);
+//	printf("%s\n", cmd);
 //	system(cmd);
 	exec(cmd);
 //	return true;
@@ -305,7 +307,9 @@ bool vmon(int id, int cpu, int mem, char *mac, int type, char *br=NULL) {
 			xmlog(cmd);
 			system(cmd);
 		} else if(3 == type) {	//host-only
-
+			sprintf(cmd, "/sbin/ifconfig VM%d up; brctl addif br1 VM%d", id, id);
+			xmlog(cmd);
+			system(cmd);
 		} else if(4 == type) {	//nat
 
 		}
@@ -370,6 +374,26 @@ bool vmcontinue(int id) {
 	} else{
 		return false;
 	}
+}
+
+
+void diskmount(int id, char *disk){
+/*
+	sprintf(cmd, );
+	sprintf(file, "%s/%s", diskdir, name);
+	sprintf(cmd, "drive_add 0 if=none,file=%s,format=qcow2,id=%s", file, name);
+//	printf("%s\n", cmd);
+	if(!monitor(id, cmd, result)) {
+		printf("error\n");
+	}
+	sprintf(cmd, "device_add virtio-blk-pci,drive=%s,id=%s", name, name);
+//	printf("%s\n", cmd);
+	if(monitor(id, cmd, result)) {
+		printf("ok\n");
+	} else {
+		printf("error\n");
+	}
+*/
 }
 
 //**********************************************************************************************************************************
@@ -1151,6 +1175,37 @@ void brctl_addbr() {
 	printf("ok\n");
 }
 
+void diskk_mount() {
+	int id;
+	char disk[64];
+	scanf("%d%s", &id, disk);
+  sprintf(cmd, "%s/file.sh %d %s", dir, id, disk);
+	system(cmd);
+	sprintf(file, "%s/%d-%s", vmdir, id, disk);
+  sprintf(cmd, "drive_add 0 if=none,file=%s,format=qcow2,id=xmdisk", file);
+//  printf("%s\n", cmd);
+  if(!monitor(id, cmd, result)) {
+    printf("error\n");
+  }
+  sprintf(cmd, "device_add virtio-blk-pci,drive=xmdisk,id=xmdisk");
+//  printf("%s\n", cmd);
+  if(monitor(id, cmd, result)) {
+    printf("ok\n");
+  } else {
+    printf("error\n");
+  }			
+}
+
+void diskk_umount() {
+	int id;
+	scanf("%d", &id);
+	sprintf(cmd, "device_del xmdisk");
+  if(monitor(id, cmd, result)) {
+    printf("ok\n");
+  } else {                                                                                                               
+    printf("error\n");
+	}
+}
 
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
@@ -1329,6 +1384,14 @@ int main(int argc, char **argv) {
 		//addbr
 		if(1 == ctl) {
 			brctl_addbr();
+		}
+	} else if(strcmp(cmd, "diskk") == 0) {
+		scanf("%d", &ctl);
+		//mount, umount
+		if(1 == ctl) {
+			diskk_mount();
+		} else if(2 == ctl) {
+			diskk_umount();
 		}
 	} else{
 
