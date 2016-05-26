@@ -281,12 +281,12 @@ int vmstatus(int id) {
 	}
 }
 
-bool vmon(int id, int cpu, int mem, char *mac, int type=0, char *br=NULL) {
+bool vmon(int id, int cpu, int mem, char *mac, int type, char *br=NULL) {
 	if(vmison(id)) {
 		return true;
 	}
 	sprintf(file, "%s/VM%d", vmdir, id);
-	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id, qmdir, id, id);
+	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=no,downscript=no,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d > /dev/null 2>&1 &", id, cpu, mem, file, id+100, mac, id, id, cldir, id, id, id, qmdir, id, id);
 	xmlog(cmd);
 //	printf("%s\n", cmd);
 //	system(cmd);
@@ -296,7 +296,6 @@ bool vmon(int id, int cpu, int mem, char *mac, int type=0, char *br=NULL) {
 	usleep(100000);
 //		printf("type=%d br=%s\n", type, br);
 	if(vmison(id)) {
-/*
 		if(0 == type) {	//bridge
 			sprintf(cmd, "/sbin/ifconfig VM%d up; brctl addif br0 VM%d", id, id);
 			xmlog(cmd);
@@ -314,7 +313,6 @@ bool vmon(int id, int cpu, int mem, char *mac, int type=0, char *br=NULL) {
 		} else if(4 == type) {	//nat
 
 		}
-*/
 		return true;
 	} else{
 		return false;
@@ -463,8 +461,7 @@ void ppower_on() {
 	while(true) {
 		scanf("%d", &id);
 		if(-1 == id)break;
-//		scanf("%d %d %s %d %s", &cpu, &mem, mac, &type, br);
-		scanf("%d %d %s", &cpu, &mem, mac);
+		scanf("%d %d %s %d %s", &cpu, &mem, mac, &type, br);
 		if(vmon(id, cpu, mem, mac, type, br)) {
 			printf("ok\n");
 		} else{
@@ -565,8 +562,7 @@ void power_on() {
   int id, cpu, mem;
   char mac[1024];
 	int type; char br[32];
-//  scanf("%d %d %d %s %d %s", &id, &cpu, &mem, mac, &type, br);
-  scanf("%d %d %d %s", &id, &cpu, &mem, mac);
+  scanf("%d %d %d %s %d %s", &id, &cpu, &mem, mac, &type, br);
   if(vmon(id, cpu, mem, mac, type, br)) {
     printf("ok\n");
   } else{
@@ -891,7 +887,7 @@ void migrate_recv0() {
   time(&t);
 	vmadd(1, base, id);
 	sprintf(file, "%s/VM%d", vmdir, id);
-	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=CL%d,path=%s/CL%d,server,nowait -monitor chardev:CL%d -chardev socket,id=QM%d,path=%s/QM%d,server,nowait -qmp chardev:QM%d -incoming tcp:0:%d > %s/%lld &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id, qmdir, id, id, id+8000, logdir, t);
+	sprintf(cmd, "qemu-kvm -name VM%d -smp %d,maxcpus=240 -m %d -rtc base=localtime -drive file=%s,if=virtio,media=disk,index=0 -vnc :%d -net nic,macaddr=%s,model=virtio -net tap,script=%s,downscript=%s,ifname=VM%d -usb -usbdevice tablet -enable-kvm -chardev socket,id=VM%d,path=%s/VM%d,server,nowait -monitor chardev:VM%d -incoming tcp:0:%d > %s/%lld &", id, cpu, mem, file, id+100, mac, ifup, ifdown, id, id, cldir, id, id, id+8000, logdir, t);
 	xmlog(cmd);
 //	system(cmd);
 	exec(cmd);
