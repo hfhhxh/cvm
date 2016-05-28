@@ -191,7 +191,7 @@ int getpid(char *arg) {
 }
 
 int killpid(int pid) {
-	sprintf(cmd, "kill -9 %d > /dev/null", pid);
+	sprintf(cmd, "kill -9 %d > /dev/null 2>&1", pid);
 	system(cmd);
 	xmlog(cmd);
 }
@@ -218,11 +218,11 @@ bool exec(char *cmd) {
 
 bool vmadd(int type, int arg, int id) {
 	if(type == 1) {
-		sprintf(cmd, "qemu-img create -f qcow2 -o backing_file=%s/BACK%d %s/VM%d > /dev/null", vmdir, arg, vmdir, id);
+		sprintf(cmd, "qemu-img create -f qcow2 -o backing_file=%s/BACK%d %s/VM%d > /dev/null 2>&1", vmdir, arg, vmdir, id);
 		xmlog(cmd);
 		system(cmd);
 	} else if(type == 2) {
-		sprintf(cmd, "qemu-img create -f qcow2  %s/BACK%d %dG > /dev/null", vmdir,id, arg);
+		sprintf(cmd, "qemu-img create -f qcow2  %s/BACK%d %dG > /dev/null 2>&1", vmdir,id, arg);
 		xmlog(cmd);
 		system(cmd);
 		vmadd(1, id, id);
@@ -238,11 +238,11 @@ bool vmadd(int type, int arg, int id) {
 
 bool vmdel(int id) {
 	sprintf(file, "%s/VM%d", vmdir, id);
-	sprintf(cmd, "rm -f %s > /dev/null", file);
+	sprintf(cmd, "rm -f %s > /dev/null 2>&1", file);
 	xmlog(cmd);
 	system(cmd);
 	sprintf(file, "%s/BACK%d", vmdir, id);
-  sprintf(cmd, "rm -f %s > /dev/null", file);
+  sprintf(cmd, "rm -f %s > /dev/null 2>&1", file);
   xmlog(cmd);
   system(cmd);
 	if(fileExist(file)) {
@@ -343,7 +343,7 @@ bool vmhalt(int id) {
   }
   int rs;
   sscanf(result, "%*s%d", &rs);
-  sprintf(cmd, "kill -9 %d > /dev/null", rs);
+  sprintf(cmd, "kill -9 %d > /dev/null 2>&1", rs);
   xmlog(cmd);
   system(cmd);
 	usleep(100000);
@@ -627,7 +627,7 @@ void power_continue() {
 void power_commit() {
 	int id;
 	scanf("%d", &id);
-	sprintf(cmd, "qemu-img commit -f qcow2 %s/VM%d > /dev/null", vmdir, id);
+	sprintf(cmd, "qemu-img commit -f qcow2 %s/VM%d > /dev/null 2>&1", vmdir, id);
 	xmlog(cmd);
 	system(cmd);
 	printf("ok\n");
@@ -1050,7 +1050,7 @@ void backup_query() {
 void backup_rebase() {
   int id;
   scanf("%d", &id);
-  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null", vmdir, id, vmdir, id);
+  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null 2>&1", vmdir, id, vmdir, id);
   xmlog(cmd);
 	system(cmd);
   printf("ok\n");
@@ -1059,7 +1059,7 @@ void backup_rebase() {
 void alter_alter() {
   int id, baseid;
 	scanf("%d%d", &id, &baseid);
-  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null", vmdir, id, vmdir, id);
+  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null 2>&1", vmdir, id, vmdir, id);
   xmlog(cmd);
 	system(cmd);
 	time_t t;
@@ -1079,14 +1079,14 @@ void alter_query() {
 void alter_rebase() {
   int id;
   scanf("%d", &id);
-  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null", vmdir, id, vmdir, id);
+  sprintf(cmd, "qemu-img rebase -f qcow2 -u -b %s/BACK%d %s/VM%d > /dev/null 2>&1", vmdir, id, vmdir, id);
   xmlog(cmd);
 	system(cmd);
   printf("ok\n");
 }
 
 void online() {
-	sprintf(cmd, "ls %s", vmdir);
+	sprintf(cmd, "ls %s | grep VM", vmdir);
   getresult(cmd, result2);
   if(0 == result2[0]) {
     printf("-1\n");
@@ -1129,7 +1129,7 @@ void disk_create() {
 	int size;
 	scanf("%s%d", name, &size);
 	sprintf(file, "%s/%s%", diskdir, name);
-	sprintf(cmd, "qemu-img create -f qcow2  %s %dG > /dev/null", file, size);
+	sprintf(cmd, "qemu-img create -f qcow2  %s %dG > /dev/null 2>&1", file, size);
 	xmlog(cmd);
 	system(cmd);
 	if(fileExist(file)) {
@@ -1172,11 +1172,27 @@ void brctl_addbr() {
 	int type, tag;
 	char br[32], eth[32], ip[32], mask[32];
 	scanf("%d%d%s%s%s%s", &type, &tag, br, eth, ip, mask);
-	sprintf(cmd, "%s/addbr.sh %d %s %s %s %s > /dev/null", dir, tag, br, eth, ip, mask);
+	sprintf(cmd, "%s/addbr.sh %d %d %s %s %s %s > /dev/null 2>&1", dir, type, tag, br, eth, ip, mask);
 //	printf("%s\n", cmd);
 	xmlog(cmd);
 	system(cmd);
 	printf("ok\n");
+}
+
+void brctl_addif() {
+	int id, type;
+	char br[32];
+	while(true) {
+		scanf("%d", &id);
+		if(-1 == id) break;
+		scanf("%d%s", &type, &br);
+		sprintf(cmd, "%s/addif.sh %d %d %s > /dev/null 2>&1", dir, id, type, br);
+//	printf("%s\n", cmd);
+		xmlog(cmd);
+		system(cmd);
+		printf("ok\n");
+		fflush(stdout);
+	}
 }
 
 void diskk_mount() {
@@ -1385,9 +1401,13 @@ int main(int argc, char **argv) {
 		}
 	} else if(strcmp(cmd, "brctl") == 0) {
 		scanf("%d", &ctl);
-		//addbr
+		//addbr, delif , addif, delif
 		if(1 == ctl) {
 			brctl_addbr();
+		} else if(2 == ctl) {
+
+		} else if(3 == ctl) {
+			brctl_addif();
 		}
 	} else if(strcmp(cmd, "diskk") == 0) {
 		scanf("%d", &ctl);

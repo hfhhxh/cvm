@@ -5,7 +5,7 @@ for iface in $ifaces
 do
   #echo $iface
   brctl addif br0 $iface
-  ifconfig $iface 0.0.0.0
+  ifconfig $iface 0.0.0.0 up
 done
 /etc/init.d/networking restart
 
@@ -36,5 +36,8 @@ chmod +x /var/cos/cvm/online
 chmod +x /var/cos/cvm/qmp-shell
 chmod +x /var/cos/cvm/qmp.py
 chmod +x /var/cos/cvm/addbr.sh
+chmod +x /var/cos/cvm/addif.sh
+chmod +x /var/cos/cvm/initnet.sh
+chmod +x /var/cos/cvm/file.sh
 
 /var/cos/cvm/startcvm.sh &
