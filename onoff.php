@@ -22,14 +22,16 @@ function getip(){
 }
 
 $ip = getip();
+echo $ip;
 $file = "/var/cos/cvm/cosconfig.xml";
 $xml = simplexml_load_file($file);
 $cosip = $xml->cos;
 //echo "$cosip\n";
 $data = "<cvm><type>autostart</type><ip>$ip</ip></cvm>";
-//echo "$data\n";
-$url = "http://$cosip/cos/service/cloudvm/autostart.php";
-//echo "$url\n";
-$data = QueryData($url, $data);
+$data = "<cvm><type>autoonoff</type><action>autoonoff</action><ip>$ip</ip></cvm>";
+echo "$data\n";
+$url = "http://$cosip/cos/service/cloudvm/autoonoff.php";
+echo "$url\n";
+//$data = QueryData($url, $data);
 //echo "$data\n";
 ?>

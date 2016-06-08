@@ -315,6 +315,8 @@ bool vmon(int id, int cpu, int mem, char *mac, int type=0, char *br=NULL) {
 
 		}
 */
+		monitor(id, "loadvm init", result);
+		monitor(id, "c", result);
 		return true;
 	} else{
 		return false;
@@ -1087,7 +1089,7 @@ void alter_rebase() {
 
 void online() {
 	sprintf(cmd, "ls %s | grep VM", vmdir);
-  getresult(cmd, result2);
+  getresult(cmd, result2, 0);
   if(0 == result2[0]) {
     printf("-1\n");
     return;
