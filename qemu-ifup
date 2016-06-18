@@ -1,7 +1,6 @@
 #!/bin/sh
 
 switch='br0'
-/sbin/ifconfig $1 up 
+/sbin/ifconfig $1 0.0.0.0 up 
 brctl delif ${switch} $1
 brctl addif ${switch} $1
-

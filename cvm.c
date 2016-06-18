@@ -1229,6 +1229,30 @@ void diskk_umount() {
 	}
 }
 
+//backup in particular time
+void pbackup_backup() {
+    
+    int vmid, backid;
+    char ip[32];
+    time_t t;
+    while (true) {
+        scanf("%d", &vmid);
+        if(vmid == -1)
+            break;
+        scanf("%d%s", &backid, ip);
+        time(&t);
+        sprintf(cmd, "rsync -avP %s/BACK%d root@%s:%s/BACK%d > %s/%lld &", vmdir, vmid, ip, backupdir, backid, logdir, t);
+        xmlog(cmd);
+        system(cmd);
+        sprintf(cmd, "rsync -avP %s/VM%d root@%s:%s/VM%d > %s/%lld &", vmdir, vmid, ip, backupdir, backid, logdir, t+1);
+        xmlog(cmd);
+        system(cmd);
+        printf("%lld\n", t);
+				fflush(stdout);
+        sleep(10);
+    }
+}
+
 //**********************************************************************************************************************************
 //**********************************************************************************************************************************
 
@@ -1419,6 +1443,8 @@ int main(int argc, char **argv) {
 		} else if(2 == ctl) {
 			diskk_umount();
 		}
+	} else if(strcmp(cmd,"pbackup") == 0) {
+		pbackup_backup();
 	} else{
 
 	}

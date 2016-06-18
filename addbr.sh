@@ -12,10 +12,10 @@ ifc="/var/cos/cvm/$br.sh"
 echo "#!/bin/sh" > $ifc
 chmod +x $ifc
 
-echo "$ifc" >> $net
+#echo "$ifc" >> $net
 
-ifconfig br0 down
-	echo "ifconfig br0 down" >> $ifc
+#ifconfig br0 down
+#	echo "ifconfig br0 down" >> $ifc
 brctl addbr $br
 	echo "brctl addbr $br" >> $ifc
 ifconfig $br $ip netmask $mask up
@@ -26,6 +26,6 @@ brctl addif $br $eth.$tag
 	echo "brctl addif $br $eth.$tag" >> $ifc
 ifconfig $eth.$tag up
 	echo "ifconfig $eth.$tag up" >> $ifc
-ifconfig br0 up
-	echo "ifconfig br0 up" >> $ifc
+#ifconfig br0 up
+#	echo "ifconfig br0 up" >> $ifc
 
